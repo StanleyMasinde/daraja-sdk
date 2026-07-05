@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "A memory-safe Rust SDK for Safaricom Daraja (M-Pesa API 3.0)"
 authors = ["Stanley Masinde <hello@stanleymasinde.com>"]
+license = "MIT"
 readme = "README.md"
 keywords = ["mpesa", "daraja", "safaricom", "kenya", "payments", "mobile-money"]
 categories = ["api-bindings", "web-programming::http-client"]
