@@ -1,0 +1,30 @@
+name: Publish to crates.io
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for OIDC token exchange
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      - name: Check crate version matches tag
+        run: |
+          crate_version="v$(grep -m 1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          echo "crate: ${crate_version}, tag: ${GITHUB_REF_NAME}"
+          [[ "${crate_version}" == "${GITHUB_REF_NAME}" ]]
+
+      - name: Publish
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
