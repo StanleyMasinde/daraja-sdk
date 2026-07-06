@@ -22,23 +22,26 @@ pub struct GenerateAccessTokenResponse {
 /// An M-Pesa SDK client.
 ///
 /// `Client` holds the configuration state needed to build requests against the Daraja M-Pesa API.
+/// It borrows the consumer key and secret rather than owning them — credentials must remain
+/// valid for as long as the `Client` exists.
+///
 /// Construct it with [`Client::new`] for defaults, or the recommended [`Client::with_credentials`]
 /// to supply a consumer key and secret up front.
-pub struct Client {
+pub struct Client<'a> {
     /// The consumer key of your app in Daraja.
-    pub consumer_key: String,
+    pub consumer_key: &'a str,
 
     /// The consumer secret of your app in Daraja.
-    pub consumer_secret: String,
+    pub consumer_secret: &'a str,
 }
 
-impl Default for Client {
+impl Default for Client<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Client {
+impl<'a> Client<'a> {
     /// Creates a new `Client` with default settings.
     ///
     /// # Examples
@@ -50,24 +53,24 @@ impl Client {
     /// ```
     pub fn new() -> Self {
         Self {
-            consumer_key: String::new(),
-            consumer_secret: String::new(),
+            consumer_key: "",
+            consumer_secret: "",
         }
     }
 
     /// Creates a `Client` preconfigured with consumer_key and consumer_secret.
+    ///
+    /// Credentials are borrowed, not copied. They must remain valid for as long as
+    /// the returned `Client` is used.
     ///
     /// # Examples
     ///
     /// ```
     /// use daraja_sdk::mpesa;
     ///
-    /// let client = mpesa::Client::with_credentials(
-    ///     "consumer_key".to_string(),
-    ///     "consumer_secret".to_string(),
-    /// );
+    /// let client = mpesa::Client::with_credentials("consumer_key", "consumer_secret");
     /// ```
-    pub fn with_credentials(consumer_key: String, consumer_secret: String) -> Self {
+    pub fn with_credentials(consumer_key: &'a str, consumer_secret: &'a str) -> Self {
         Self {
             consumer_key,
             consumer_secret,
@@ -91,10 +94,7 @@ impl Client {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), reqwest::Error> {
-    ///     let client = mpesa::Client::with_credentials(
-    ///         "consumer_key".to_string(),
-    ///         "consumer_secret".to_string(),
-    ///     );
+    ///     let client = mpesa::Client::with_credentials("consumer_key", "consumer_secret");
     ///
     ///     let token = client.generate_access_token().await?;
     ///     println!("{}", token.access_token);
@@ -155,7 +155,7 @@ mod tests {
         let test_config = TestConfig::load();
 
         let client =
-            Client::with_credentials(test_config.consumer_key, test_config.consumer_secret);
+            Client::with_credentials(&test_config.consumer_key, &test_config.consumer_secret);
 
         // Reuse a cached token when still valid to reduce live API calls.
         if let Some((cached_token, expires_at)) = read_token_cache() {
