@@ -47,3 +47,5 @@ cargo doc --open
 ```
 
 Integration tests call the live Daraja sandbox. `config.toml` is gitignored so credentials are not committed.
+
+To reduce repeated OAuth calls during local development, the integration test caches the last successful access token in `last_token.txt` at the project root. On subsequent runs, the test reuses the cached token if it has not expired instead of requesting a new one from the API. This file is gitignored and contains live credentials — do not commit it. Delete `last_token.txt` if you want to force a fresh token fetch or if the cache format changes.
