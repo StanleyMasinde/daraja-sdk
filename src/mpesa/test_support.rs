@@ -81,7 +81,7 @@ pub async fn get_access_token() -> String {
     } else {
         let test_config = TestConfig::load();
         let client =
-            Client::with_credentials(test_config.consumer_key, test_config.consumer_secret);
+            Client::with_credentials(&test_config.consumer_key, &test_config.consumer_secret);
         let response = client
             .generate_access_token()
             .await

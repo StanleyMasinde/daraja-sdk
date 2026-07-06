@@ -11,11 +11,7 @@ use daraja_sdk::mpesa;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
-    let client = mpesa::Client::with_credentials(
-        "your-consumer-key".into(),
-        "your-consumer-secret".into(),
-    );
-
+    let client = mpesa::Client::with_credentials("your-consumer-key", "your-consumer-secret");
     let token = client.generate_access_token().await?;
     println!("{}", token.access_token);
 
