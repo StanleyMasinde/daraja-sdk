@@ -147,7 +147,53 @@ impl Mpesa {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        fs,
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
+
     use super::*;
+
+    const TOKEN_CACHE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/last_token.txt");
+
+    fn read_token_cache() -> Option<(String, SystemTime)> {
+        let contents = fs::read_to_string(TOKEN_CACHE_PATH).ok()?;
+        let mut parts = contents.splitn(2, ':');
+        let access_token = parts.next()?.trim().to_string();
+        if access_token.is_empty() {
+            return None;
+        }
+        let expires_at_secs: u64 = parts.next()?.trim().parse().ok()?;
+        let expires_at = UNIX_EPOCH.checked_add(Duration::from_secs(expires_at_secs))?;
+        if expires_at <= SystemTime::now() {
+            return None;
+        }
+        Some((access_token, expires_at))
+    }
+
+    fn write_token_cache(access_token: &str, expires_in: u64) {
+        let expires_at = SystemTime::now()
+            .checked_add(Duration::from_secs(expires_in))
+            .expect("expires_in should fit in SystemTime");
+        let expires_at_secs = expires_at
+            .duration_since(UNIX_EPOCH)
+            .expect("expiry should be after UNIX_EPOCH")
+            .as_secs();
+        fs::write(
+            TOKEN_CACHE_PATH,
+            format!("{access_token}:{expires_at_secs}"),
+        )
+        .expect("failed to write token cache");
+    }
+
+    fn assert_valid_access_token(access_token: &str) {
+        assert!(!access_token.is_empty());
+    }
+
+    fn assert_valid_expires_in(expires_in: u64) {
+        assert!(expires_in > 0);
+        assert!(expires_in <= 3600);
+    }
 
     #[derive(Deserialize)]
     struct TestConfig {
@@ -194,15 +240,27 @@ mod tests {
         let test_config = TestConfig::load();
 
         let mpesa = Mpesa::with_credentials(test_config.consumer_key, test_config.consumer_secret);
+
+        // Reuse a cached token when still valid to reduce live API calls.
+        if let Some((cached_token, expires_at)) = read_token_cache() {
+            assert_valid_access_token(&cached_token);
+            let remaining = expires_at
+                .duration_since(SystemTime::now())
+                .expect("cached token should not be expired");
+            assert_valid_expires_in(remaining.as_secs());
+            return;
+        }
+
         let response = mpesa.generate_access_token().await.unwrap();
 
-        assert!(!response.access_token.is_empty());
+        assert_valid_access_token(&response.access_token);
 
         let expires_in: u64 = response
             .expires_in
             .parse()
             .expect("expires_in should be a positive integer");
-        assert!(expires_in > 0);
-        assert!(expires_in <= 3600);
+        assert_valid_expires_in(expires_in);
+
+        write_token_cache(&response.access_token, expires_in);
     }
 }
