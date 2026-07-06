@@ -1,7 +1,7 @@
 //! M-Pesa client for the [Safaricom Daraja](https://developer.safaricom.co.ke/) API.
 //!
-//! Start with [`Mpesa`] — construct it via [`Mpesa::with_credentials`], then call
-//! [`Mpesa::generate_access_token`] to obtain an OAuth access token for subsequent API requests.
+//! Start with [`Client`] — construct it via [`Client::with_credentials`], then call
+//! [`Client::generate_access_token`] to obtain an OAuth access token for subsequent API requests.
 
 use serde::Deserialize;
 
@@ -10,7 +10,7 @@ const OAUTH_URL: &str =
 
 /// The response from Daraja when you request an *access_token*.
 ///
-/// Returned by [`Mpesa::generate_access_token`].
+/// Returned by [`Client::generate_access_token`].
 #[derive(Deserialize, Debug)]
 pub struct GenerateAccessTokenResponse {
     /// Access token to access the APIs.
@@ -26,10 +26,10 @@ pub struct GenerateAccessTokenResponse {
 
 /// An M-Pesa SDK client.
 ///
-/// `Mpesa` holds the configuration state needed to build requests against the Daraja M-Pesa API.
-/// Construct it with [`Mpesa::new`] for defaults, or the recommended [`Mpesa::with_credentials`]
+/// `Client` holds the configuration state needed to build requests against the Daraja M-Pesa API.
+/// Construct it with [`Client::new`] for defaults, or the recommended [`Client::with_credentials`]
 /// to supply a consumer key and secret up front.
-pub struct Mpesa {
+pub struct Client {
     /// The consumer key of your app in Daraja.
     pub consumer_key: String,
 
@@ -37,21 +37,21 @@ pub struct Mpesa {
     pub consumer_secret: String,
 }
 
-impl Default for Mpesa {
+impl Default for Client {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Mpesa {
-    /// Creates a new `Mpesa` with default settings.
+impl Client {
+    /// Creates a new `Client` with default settings.
     ///
     /// # Examples
     ///
     /// ```
     /// use daraja_sdk::mpesa;
     ///
-    /// let mpesa_sdk = mpesa::Mpesa::new();
+    /// let client = mpesa::Client::new();
     /// ```
     pub fn new() -> Self {
         Self {
@@ -60,14 +60,14 @@ impl Mpesa {
         }
     }
 
-    /// Creates an `Mpesa` preconfigured with consumer_key and consumer_secret.
+    /// Creates a `Client` preconfigured with consumer_key and consumer_secret.
     ///
     /// # Examples
     ///
     /// ```
     /// use daraja_sdk::mpesa;
     ///
-    /// let mpesa_sdk = mpesa::Mpesa::with_credentials(
+    /// let client = mpesa::Client::with_credentials(
     ///     "consumer_key".to_string(),
     ///     "consumer_secret".to_string(),
     /// );
@@ -96,12 +96,12 @@ impl Mpesa {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), reqwest::Error> {
-    ///     let mpesa = mpesa::Mpesa::with_credentials(
+    ///     let client = mpesa::Client::with_credentials(
     ///         "consumer_key".to_string(),
     ///         "consumer_secret".to_string(),
     ///     );
     ///
-    ///     let token = mpesa.generate_access_token().await?;
+    ///     let token = client.generate_access_token().await?;
     ///     println!("{}", token.access_token);
     ///
     ///     Ok(())
@@ -191,22 +191,22 @@ mod tests {
 
     #[test]
     fn new_creates_client_with_empty_credentials() {
-        let mpesa = Mpesa::new();
-        assert!(mpesa.consumer_key.is_empty());
-        assert!(mpesa.consumer_secret.is_empty());
+        let client = Client::new();
+        assert!(client.consumer_key.is_empty());
+        assert!(client.consumer_secret.is_empty());
     }
 
     #[test]
     fn with_credentials_sets_consumer_key_and_secret() {
-        let mpesa = Mpesa::with_credentials("test-key".into(), "test-secret".into());
-        assert_eq!(mpesa.consumer_key, "test-key");
-        assert_eq!(mpesa.consumer_secret, "test-secret");
+        let client = Client::with_credentials("test-key".into(), "test-secret".into());
+        assert_eq!(client.consumer_key, "test-key");
+        assert_eq!(client.consumer_secret, "test-secret");
     }
 
     #[tokio::test]
     async fn generate_access_token_fails_with_invalid_credentials() {
-        let mpesa = Mpesa::with_credentials("invalid-key".into(), "invalid-secret".into());
-        let err = mpesa
+        let client = Client::with_credentials("invalid-key".into(), "invalid-secret".into());
+        let err = client
             .generate_access_token()
             .await
             .expect_err("expected request to fail with invalid credentials");
@@ -218,7 +218,8 @@ mod tests {
     async fn generate_access_token_returns_valid_response() {
         let test_config = TestConfig::load();
 
-        let mpesa = Mpesa::with_credentials(test_config.consumer_key, test_config.consumer_secret);
+        let client =
+            Client::with_credentials(test_config.consumer_key, test_config.consumer_secret);
 
         // Reuse a cached token when still valid to reduce live API calls.
         if let Some((cached_token, expires_at)) = read_token_cache() {
@@ -230,7 +231,7 @@ mod tests {
             return;
         }
 
-        let response = mpesa.generate_access_token().await.unwrap();
+        let response = client.generate_access_token().await.unwrap();
 
         assert_valid_access_token(&response.access_token);
 

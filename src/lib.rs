@@ -15,12 +15,12 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), reqwest::Error> {
-//!     let mpesa = mpesa::Mpesa::with_credentials(
+//!     let client = mpesa::Client::with_credentials(
 //!         "your-consumer-key".into(),
 //!         "your-consumer-secret".into(),
 //!     );
 //!
-//!     let token = mpesa.generate_access_token().await?;
+//!     let token = client.generate_access_token().await?;
 //!     println!("{}", token.access_token);
 //!
 //!     Ok(())
