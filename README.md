@@ -5,7 +5,7 @@ A memory-safe Rust SDK for [Safaricom Daraja](https://developer.safaricom.co.ke/
 > **Experimental:** This project is an early experiment. The API is unstable, coverage is limited, and it is not ready for production use.
 
 ```rust
-use daraja_sdk::Mpesa;
+use daraja_sdk::mpesa::Mpesa;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
