@@ -20,9 +20,35 @@ pub trait DarajaApi {
     fn get_url(&self) -> String {
         let url_prefix = match self.environment() {
             DarajaEnvironment::Sandbox => "sandbox",
-            DarajaEnvironment::Live => "live",
+            DarajaEnvironment::Live => "api",
         };
 
         format!("https://{}.safaricom.co.ke/{}", url_prefix, self.path())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::types::{DarajaApi, DarajaEnvironment};
+
+    #[test]
+    fn test_daraja_api_trait() {
+        struct ReversalAPI {}
+        impl DarajaApi for ReversalAPI {
+            fn path(&self) -> &'static str {
+                "/api/v1/revese"
+            }
+
+            fn environment(&self) -> super::DarajaEnvironment {
+                DarajaEnvironment::Live
+            }
+        }
+
+        let reverse_api = ReversalAPI {};
+        assert_eq!(reverse_api.environment(), DarajaEnvironment::Live);
+        assert_eq!(
+            reverse_api.get_url(),
+            format!("https://api.safaricom.co.ke/{}", reverse_api.path())
+        )
     }
 }
