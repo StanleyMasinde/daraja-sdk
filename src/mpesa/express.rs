@@ -166,11 +166,6 @@ impl DarajaApi for MpesaExpress {
     fn environment(&self) -> DarajaEnvironment {
         self.environment
     }
-
-    fn production(mut self) -> Self {
-        self.environment = DarajaEnvironment::Live;
-        self
-    }
 }
 
 impl MpesaExpress {
