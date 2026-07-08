@@ -4,6 +4,12 @@ A memory-safe Rust SDK for [Safaricom Daraja](https://developer.safaricom.co.ke/
 
 > **Experimental:** This project is an early experiment. The API is unstable, coverage is limited, and it is not ready for production use.
 
+## Environments
+
+API builders default to the Daraja **sandbox** (`sandbox.safaricom.co.ke`). Call `.production()` on each builder before sending a request to target the live API (`api.safaricom.co.ke`).
+
+Environment is configured **per endpoint builder** — there is no shared global setting. If you use OAuth and STK Push together, call `.production()` on both builders so the access token and the STK Push request target the same environment.
+
 ## OAuth authentication
 
 ```rust
@@ -12,6 +18,22 @@ use daraja_sdk::mpesa;
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
     let client = mpesa::Client::with_credentials("your-consumer-key", "your-consumer-secret");
+    let token = client.generate_access_token().await?;
+    println!("{}", token.access_token);
+
+    Ok(())
+}
+```
+
+Production:
+
+```rust
+use daraja_sdk::mpesa;
+
+#[tokio::main]
+async fn main() -> Result<(), reqwest::Error> {
+    let client = mpesa::Client::with_credentials("your-consumer-key", "your-consumer-secret")
+        .production();
     let token = client.generate_access_token().await?;
     println!("{}", token.access_token);
 
@@ -48,17 +70,76 @@ async fn main() -> Result<(), ExpressError> {
 }
 ```
 
+Production:
+
+```rust
+use daraja_sdk::mpesa::{ExpressError, MpesaExpress};
+
+#[tokio::main]
+async fn main() -> Result<(), ExpressError> {
+    let response = MpesaExpress::new()
+        .production()
+        .access_token("your-production-access-token")
+        .passkey("your-production-passkey")
+        .business_short_code(174379)
+        .party_a(254700000000)
+        .party_b(174379)
+        .phone_number(254700000000)
+        .amount(1)
+        .account_reference("Order123")
+        .tx_description("Payment")
+        .call_back_url("https://your-domain.com/callback")
+        .send_prompt()
+        .await?;
+
+    println!("{}", response.customer_message);
+    Ok(())
+}
+```
+
+Using OAuth and STK Push together in production:
+
+```rust
+use daraja_sdk::mpesa::{ExpressError, MpesaExpress};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let token = mpesa::Client::with_credentials("your-consumer-key", "your-consumer-secret")
+        .production()
+        .generate_access_token()
+        .await?;
+
+    let response = MpesaExpress::new()
+        .production()
+        .access_token(&token.access_token)
+        .passkey("your-production-passkey")
+        .business_short_code(174379)
+        .party_a(254700000000)
+        .party_b(174379)
+        .phone_number(254700000000)
+        .amount(1)
+        .account_reference("Order123")
+        .tx_description("Payment")
+        .call_back_url("https://your-domain.com/callback")
+        .send_prompt()
+        .await?;
+
+    println!("{}", response.customer_message);
+    Ok(())
+}
+```
+
 ## Planned features
 
 - [x] **OAuth authentication** — generate access tokens for Daraja API requests
 - [x] **M-Pesa Express (STK Push)** — initiate Lipa na M-Pesa Online payments
+- [x] **Production environment** — configurable sandbox vs production base URLs (per endpoint builder)
 - [ ] **STK Push query** — query the status of an STK Push request
 - [ ] **B2C** — send money from a business shortcode to a customer
 - [ ] **C2B** — register validation and confirmation URLs for paybill/till payments
 - [ ] **Transaction status** — query the result of a payment request
 - [ ] **Account balance** — check balances for a shortcode
 - [ ] **Reversals** — reverse a completed transaction
-- [ ] **Production environment** — configurable sandbox vs production base URLs
 
 ## Developing locally
 

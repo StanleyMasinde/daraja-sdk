@@ -6,6 +6,14 @@
 //!
 //! For Lipa Na M-Pesa Online (STK Push), use [`MpesaExpress`] after obtaining an access token.
 //! Daraja delivers transaction results to your callback URL — handle those in your application.
+//!
+//! ## Environments
+//!
+//! Both [`Client`] and [`MpesaExpress`] default to the
+//! [sandbox](crate::DarajaEnvironment::Sandbox). Call [`.production()`](crate::DarajaApi::production)
+//! on each builder before sending a request to target the live Daraja API. Configure each
+//! endpoint independently — if you use OAuth and STK Push together, call `.production()` on
+//! both builders when using production credentials.
 
 mod client;
 mod express;
@@ -13,6 +21,8 @@ mod express;
 #[cfg(test)]
 pub(crate) mod test_support;
 
+#[doc(inline)]
+pub use crate::types::{DarajaApi, DarajaEnvironment};
 #[doc(inline)]
 pub use client::{Client, GenerateAccessTokenResponse};
 #[doc(inline)]
