@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{types::DarajaEnvironment, url_helper::url_helper};
+use crate::types::{DarajaApi, DarajaEnvironment};
 
 /// The response from Daraja when you request an *access_token*.
 ///
@@ -40,6 +40,16 @@ pub struct Client<'a> {
 impl Default for Client<'_> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl DarajaApi for Client<'_> {
+    fn path(&self) -> &'static str {
+        "oauth/v1/generate?grant_type=client_credentials"
+    }
+
+    fn environment(&self) -> DarajaEnvironment {
+        self.environment
     }
 }
 
@@ -111,10 +121,7 @@ impl<'a> Client<'a> {
     ) -> Result<GenerateAccessTokenResponse, reqwest::Error> {
         let http_client = reqwest::Client::new();
         http_client
-            .get(url_helper(
-                self.environment,
-                "oauth/v1/generate?grant_type=client_credentials",
-            ))
+            .get(self.get_url())
             .basic_auth(self.consumer_key, Some(self.consumer_secret))
             .send()
             .await?

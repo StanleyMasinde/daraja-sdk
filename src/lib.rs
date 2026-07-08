@@ -56,4 +56,3 @@
 
 pub mod mpesa;
 pub mod types;
-mod url_helper;

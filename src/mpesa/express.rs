@@ -5,7 +5,7 @@ use chrono::{FixedOffset, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::DarajaEnvironment, url_helper::url_helper};
+use crate::types::{DarajaApi, DarajaEnvironment};
 
 const EAT_OFFSET_SECS: i32 = 3 * 3600;
 const MAX_ACCOUNT_REFERENCE_LEN: usize = 12;
@@ -158,6 +158,16 @@ pub struct MpesaExpress {
     environment: DarajaEnvironment,
 }
 
+impl DarajaApi for MpesaExpress {
+    fn path(&self) -> &'static str {
+        "mpesa/stkpush/v1/processrequest"
+    }
+
+    fn environment(&self) -> DarajaEnvironment {
+        self.environment
+    }
+}
+
 impl MpesaExpress {
     /// Creates a new STK Push builder with default field values.
     pub fn new() -> Self {
@@ -287,10 +297,7 @@ impl MpesaExpress {
 
         let response = self
             .http_client
-            .post(url_helper(
-                self.environment,
-                "mpesa/stkpush/v1/processrequest",
-            ))
+            .post(self.get_url())
             .bearer_auth(&self.access_token)
             .json(&self.request_body)
             .send()
