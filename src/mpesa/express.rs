@@ -5,7 +5,7 @@ use chrono::{FixedOffset, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-static URL: &str = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest";
+use crate::{types::DarajaEnvironment, url_helper::url_helper};
 
 const EAT_OFFSET_SECS: i32 = 3 * 3600;
 const MAX_ACCOUNT_REFERENCE_LEN: usize = 12;
@@ -155,6 +155,7 @@ pub struct MpesaExpress {
     access_token: String,
     request_body: MpesaExpressRequest,
     http_client: Client,
+    environment: DarajaEnvironment,
 }
 
 impl MpesaExpress {
@@ -165,6 +166,7 @@ impl MpesaExpress {
             request_body: MpesaExpressRequest::default(),
             passkey: String::new(),
             http_client: Client::new(),
+            environment: DarajaEnvironment::default(),
         }
     }
 
@@ -285,7 +287,10 @@ impl MpesaExpress {
 
         let response = self
             .http_client
-            .post(URL)
+            .post(url_helper(
+                self.environment,
+                "mpesa/stkpush/v1/processrequest",
+            ))
             .bearer_auth(&self.access_token)
             .json(&self.request_body)
             .send()

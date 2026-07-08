@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
-const OAUTH_URL: &str =
-    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";
+use crate::{types::DarajaEnvironment, url_helper::url_helper};
 
 /// The response from Daraja when you request an *access_token*.
 ///
@@ -33,6 +32,9 @@ pub struct Client<'a> {
 
     /// The consumer secret of your app in Daraja.
     pub consumer_secret: &'a str,
+
+    /// The current environment.
+    pub environment: DarajaEnvironment,
 }
 
 impl Default for Client<'_> {
@@ -55,6 +57,7 @@ impl<'a> Client<'a> {
         Self {
             consumer_key: "",
             consumer_secret: "",
+            environment: DarajaEnvironment::default(),
         }
     }
 
@@ -74,6 +77,7 @@ impl<'a> Client<'a> {
         Self {
             consumer_key,
             consumer_secret,
+            environment: DarajaEnvironment::default(),
         }
     }
 
@@ -107,7 +111,10 @@ impl<'a> Client<'a> {
     ) -> Result<GenerateAccessTokenResponse, reqwest::Error> {
         let http_client = reqwest::Client::new();
         http_client
-            .get(OAUTH_URL)
+            .get(url_helper(
+                self.environment,
+                "oauth/v1/generate?grant_type=client_credentials",
+            ))
             .basic_auth(self.consumer_key, Some(self.consumer_secret))
             .send()
             .await?
