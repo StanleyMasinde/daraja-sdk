@@ -1,6 +1,6 @@
 [package]
 name = "daraja-sdk"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "A memory-safe Rust SDK for Safaricom Daraja (M-Pesa API 3.0)"
 authors = ["Stanley Masinde <hello@stanleymasinde.com>"]
