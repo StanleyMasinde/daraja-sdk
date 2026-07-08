@@ -443,7 +443,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stk_push() {
-        let test_config = TestConfig::load(false);
+        let test_config = TestConfig::load();
         let access_token = get_access_token().await;
         let response = MpesaExpress::new()
             .access_token(&access_token)
