@@ -85,26 +85,13 @@ pub struct StkPushResponse {
 }
 
 /// Identifies the STK Push transaction type sent to Daraja.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransactionType {
     /// Use for PayBill numbers.
     #[default]
     CustomerPayBillOnline,
     /// Use for Till numbers.
     CustomerBuyGoodsOnline,
-}
-
-impl Serialize for TransactionType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let value = match self {
-            Self::CustomerPayBillOnline => "CustomerPayBillOnline",
-            Self::CustomerBuyGoodsOnline => "CustomerBuyGoodsOnline",
-        };
-        serializer.serialize_str(value)
-    }
 }
 
 #[derive(Serialize, Default, Debug)]
