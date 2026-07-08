@@ -1,4 +1,4 @@
-# daraja-sdk
+# Daraja SDK
 
 A memory-safe Rust SDK for [Safaricom Daraja](https://developer.safaricom.co.ke/) (M-Pesa API 3.0), focused on correctness and type safety.
 
