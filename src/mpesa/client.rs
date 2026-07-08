@@ -51,6 +51,11 @@ impl DarajaApi for Client<'_> {
     fn environment(&self) -> DarajaEnvironment {
         self.environment
     }
+
+    fn production(mut self) -> Self {
+        self.environment = DarajaEnvironment::Live;
+        self
+    }
 }
 
 impl<'a> Client<'a> {

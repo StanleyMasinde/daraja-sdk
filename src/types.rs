@@ -15,6 +15,9 @@ pub trait DarajaApi {
     /// Returns the current environment.
     fn environment(&self) -> DarajaEnvironment;
 
+    /// Call this method to make APIs calls in production.
+    fn production(self) -> Self;
+
     /// Get the full URL for the particlar endpoint while respecting the
     /// environment.
     fn get_url(&self) -> String {
@@ -33,7 +36,9 @@ mod test {
 
     #[test]
     fn test_daraja_api_trait() {
-        struct ReversalAPI {}
+        struct ReversalAPI {
+            environment: DarajaEnvironment,
+        }
         impl DarajaApi for ReversalAPI {
             fn path(&self) -> &'static str {
                 "/api/v1/revese"
@@ -42,9 +47,16 @@ mod test {
             fn environment(&self) -> super::DarajaEnvironment {
                 DarajaEnvironment::Live
             }
+
+            fn production(mut self) -> Self {
+                self.environment = DarajaEnvironment::Live;
+                self
+            }
         }
 
-        let reverse_api = ReversalAPI {};
+        let reverse_api = ReversalAPI {
+            environment: DarajaEnvironment::Sandbox,
+        };
         assert_eq!(reverse_api.environment(), DarajaEnvironment::Live);
         assert_eq!(
             reverse_api.get_url(),
