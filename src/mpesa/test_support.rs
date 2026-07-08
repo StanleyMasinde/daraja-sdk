@@ -22,8 +22,14 @@ pub struct TestConfig {
 }
 
 impl TestConfig {
-    pub fn load() -> Self {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/config.toml");
+    pub fn load(is_production: bool) -> Self {
+        let mut config_file = "config.toml";
+
+        if is_production {
+            config_file = "config-prod.toml";
+        }
+
+        let path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), config_file);
         let contents = std::fs::read_to_string(path)
             .expect("copy config.toml.example to config.toml and add sandbox credentials");
         toml::from_str(&contents).expect("config.toml is malformed")
@@ -79,7 +85,7 @@ pub async fn get_access_token() -> String {
         assert_valid_expires_in(remaining.as_secs());
         cached_token
     } else {
-        let test_config = TestConfig::load();
+        let test_config = TestConfig::load(false);
         let client =
             Client::with_credentials(&test_config.consumer_key, &test_config.consumer_secret);
         let response = client

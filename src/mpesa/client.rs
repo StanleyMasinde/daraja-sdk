@@ -166,7 +166,7 @@ mod tests {
 
     #[tokio::test]
     async fn generate_access_token_returns_valid_response() {
-        let test_config = TestConfig::load();
+        let test_config = TestConfig::load(false);
 
         let client =
             Client::with_credentials(&test_config.consumer_key, &test_config.consumer_secret);

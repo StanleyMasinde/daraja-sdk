@@ -1,3 +1,4 @@
 /target
 config.toml
+config-prod.toml
 last_token.txt
