@@ -129,6 +129,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Examples
+
+Minimal runnable examples live in `examples/`. They target the **sandbox** and read credentials from environment variables.
+
+### OAuth
+
+```bash
+export DARAJA_CONSUMER_KEY="your-consumer-key"
+export DARAJA_CONSUMER_SECRET="your-consumer-secret"
+cargo run --example oauth
+```
+
+### STK Push
+
+Obtains an OAuth access token, then sends a Lipa na M-Pesa Online prompt.
+
+```bash
+export DARAJA_CONSUMER_KEY="your-consumer-key"
+export DARAJA_CONSUMER_SECRET="your-consumer-secret"
+export DARAJA_PASSKEY="your-passkey"
+export DARAJA_CALLBACK_URL="https://your-domain.com/callback"
+export DARAJA_PHONE_NUMBER="254700000000"
+cargo run --example stk_push
+```
+
+For production, add `.production()` on both `Client` and `MpesaExpress` builders (see the code samples above).
+
 ## Planned features
 
 - [x] **OAuth authentication** — generate access tokens for Daraja API requests
