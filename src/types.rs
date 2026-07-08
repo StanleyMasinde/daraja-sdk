@@ -1,22 +1,58 @@
-/// The current app mode.
-/// Sandbox is for testing while live for your live application.
-/// This defaults to Sandbox for safety. You have to explitly set it to live.
+//! Shared types for building Daraja API requests.
+//!
+//! Each API client in this crate implements [`DarajaApi`] and selects its target
+//! environment independently. Call [`.production()`](DarajaApi::production) on a
+//! builder to target the live Daraja API; otherwise requests use the sandbox.
+
+/// The Daraja API environment a client targets.
+///
+/// Defaults to [`Sandbox`](Self::Sandbox) so new builders are safe for development
+/// without extra configuration.
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub enum DarajaEnvironment {
+    /// The Daraja sandbox (`sandbox.safaricom.co.ke`).
     #[default]
     Sandbox,
+    /// The Daraja production API (`api.safaricom.co.ke`).
     Live,
 }
 
+/// Common behavior for Daraja API endpoint builders.
+///
+/// Implementors supply the endpoint path and current [`DarajaEnvironment`].
+/// [`get_url`](Self::get_url) combines them into a full request URL.
+///
+/// Each endpoint builder exposes [`.production()`](Self::production) so callers
+/// can opt into the live environment without sharing configuration across APIs.
 pub trait DarajaApi {
-    /// Returns the specific URL path snippet for the API resource.
+    /// Returns the URL path snippet for this endpoint (no leading slash).
+    ///
+    /// Example: `"oauth/v1/generate?grant_type=client_credentials"`.
     fn path(&self) -> &'static str;
 
-    /// Returns the current environment.
+    /// Returns the environment this builder will target.
     fn environment(&self) -> DarajaEnvironment;
 
-    /// Get the full URL for the particlar endpoint while respecting the
-    /// environment.
+    /// Targets the Daraja production API (`api.safaricom.co.ke`).
+    ///
+    /// Call this on a builder before sending a request when using production
+    /// credentials and passkeys. Each API builder must be configured
+    /// independently.
+    fn production(mut self) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_environment(DarajaEnvironment::Live);
+        self
+    }
+
+    /// Sets the environment used by this builder.
+    fn set_environment(&mut self, environment: DarajaEnvironment);
+
+    /// Returns the full URL for this endpoint in the builder's current environment.
+    ///
+    /// Sandbox requests use `https://sandbox.safaricom.co.ke/...`; production
+    /// requests use `https://api.safaricom.co.ke/...`.
     fn get_url(&self) -> String {
         let url_prefix = match self.environment() {
             DarajaEnvironment::Sandbox => "sandbox",
@@ -33,22 +69,37 @@ mod test {
 
     #[test]
     fn test_daraja_api_trait() {
-        struct ReversalAPI {}
+        struct ReversalAPI {
+            environment: DarajaEnvironment,
+        }
+
         impl DarajaApi for ReversalAPI {
             fn path(&self) -> &'static str {
-                "/api/v1/revese"
+                "mpesa/reversal/v1/request"
             }
 
-            fn environment(&self) -> super::DarajaEnvironment {
-                DarajaEnvironment::Live
+            fn environment(&self) -> DarajaEnvironment {
+                self.environment
+            }
+
+            fn set_environment(&mut self, environment: DarajaEnvironment) {
+                self.environment = environment;
             }
         }
 
-        let reverse_api = ReversalAPI {};
-        assert_eq!(reverse_api.environment(), DarajaEnvironment::Live);
+        let sandbox_api = ReversalAPI {
+            environment: DarajaEnvironment::Sandbox,
+        };
         assert_eq!(
-            reverse_api.get_url(),
-            format!("https://api.safaricom.co.ke/{}", reverse_api.path())
-        )
+            sandbox_api.get_url(),
+            "https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request"
+        );
+
+        let live_api = sandbox_api.production();
+        assert_eq!(live_api.environment(), DarajaEnvironment::Live);
+        assert_eq!(
+            live_api.get_url(),
+            "https://api.safaricom.co.ke/mpesa/reversal/v1/request"
+        );
     }
 }

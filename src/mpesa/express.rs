@@ -121,8 +121,14 @@ struct DarajaErrorResponse {
 
 /// Builder for initiating M-Pesa Express (STK Push) payment prompts.
 ///
-/// Obtain an access token via [`crate::mpesa::Client::generate_access_token`], configure
-/// the required fields, then call [`MpesaExpress::send_prompt`].
+/// Obtain an access token via [`crate::mpesa::Client::generate_access_token`] (or from your
+/// own OAuth flow), configure the required fields, then call [`MpesaExpress::send_prompt`].
+///
+/// New builders target the [sandbox](crate::DarajaEnvironment::Sandbox) by default.
+/// Call [`.production()`](DarajaApi::production) before [`MpesaExpress::send_prompt`] when
+/// using a production access token and passkey. When you use this crate for both OAuth and
+/// STK Push, call `.production()` on each builder so the token and request target the same
+/// environment.
 ///
 /// A callback URL is required by Daraja but must be handled by your application;
 /// this SDK does not process callback payloads.
@@ -166,6 +172,10 @@ impl DarajaApi for MpesaExpress {
     fn environment(&self) -> DarajaEnvironment {
         self.environment
     }
+
+    fn set_environment(&mut self, environment: DarajaEnvironment) {
+        self.environment = environment;
+    }
 }
 
 impl MpesaExpress {
@@ -178,6 +188,39 @@ impl MpesaExpress {
             http_client: Client::new(),
             environment: DarajaEnvironment::default(),
         }
+    }
+
+    /// Targets the Daraja production API (`api.safaricom.co.ke`).
+    ///
+    /// Defaults to [`DarajaEnvironment::Sandbox`]. Call this before
+    /// [`MpesaExpress::send_prompt`] when using a production access token and passkey.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use daraja_sdk::mpesa::{ExpressError, MpesaExpress};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), ExpressError> {
+    /// let response = MpesaExpress::new()
+    ///     .production()
+    ///     .access_token("production-access-token")
+    ///     .passkey("production-passkey")
+    ///     .business_short_code(174379)
+    ///     .party_a(254700000000)
+    ///     .party_b(174379)
+    ///     .phone_number(254700000000)
+    ///     .amount(1)
+    ///     .account_reference("Order123")
+    ///     .tx_description("Payment")
+    ///     .call_back_url("https://your-domain.com/callback")
+    ///     .send_prompt()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn production(self) -> Self {
+        DarajaApi::production(self)
     }
 
     /// Sets the OAuth access token obtained from [`crate::mpesa::Client::generate_access_token`].

@@ -18,14 +18,16 @@ pub struct GenerateAccessTokenResponse {
     pub expires_in: String,
 }
 
-/// An M-Pesa SDK client.
+/// OAuth client for obtaining Daraja access tokens.
 ///
-/// `Client` holds the configuration state needed to build requests against the Daraja M-Pesa API.
+/// `Client` holds the configuration state needed to authenticate against the Daraja API.
 /// It borrows the consumer key and secret rather than owning them — credentials must remain
 /// valid for as long as the `Client` exists.
 ///
 /// Construct it with [`Client::new`] for defaults, or the recommended [`Client::with_credentials`]
-/// to supply a consumer key and secret up front.
+/// to supply a consumer key and secret up front. New clients target the
+/// [sandbox](crate::DarajaEnvironment::Sandbox) by default; call [`.production()`](DarajaApi::production)
+/// before [`Client::generate_access_token`] to use production credentials.
 pub struct Client<'a> {
     /// The consumer key of your app in Daraja.
     pub consumer_key: &'a str,
@@ -33,7 +35,10 @@ pub struct Client<'a> {
     /// The consumer secret of your app in Daraja.
     pub consumer_secret: &'a str,
 
-    /// The current environment.
+    /// The Daraja environment this client targets.
+    ///
+    /// Defaults to [`DarajaEnvironment::Sandbox`]. Prefer [`.production()`](DarajaApi::production)
+    /// over setting this field directly.
     pub environment: DarajaEnvironment,
 }
 
@@ -50,6 +55,10 @@ impl DarajaApi for Client<'_> {
 
     fn environment(&self) -> DarajaEnvironment {
         self.environment
+    }
+
+    fn set_environment(&mut self, environment: DarajaEnvironment) {
+        self.environment = environment;
     }
 }
 
@@ -89,6 +98,29 @@ impl<'a> Client<'a> {
             consumer_secret,
             environment: DarajaEnvironment::default(),
         }
+    }
+
+    /// Targets the Daraja production API (`api.safaricom.co.ke`).
+    ///
+    /// Defaults to [`DarajaEnvironment::Sandbox`]. Call this before
+    /// [`Client::generate_access_token`] when using production consumer credentials.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use daraja_sdk::mpesa;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), reqwest::Error> {
+    ///     let client = mpesa::Client::with_credentials("consumer_key", "consumer_secret")
+    ///         .production();
+    ///     let token = client.generate_access_token().await?;
+    ///     println!("{}", token.access_token);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn production(self) -> Self {
+        DarajaApi::production(self)
     }
 
     /// Generates the access token needed to authenticate requests to the Daraja API.
