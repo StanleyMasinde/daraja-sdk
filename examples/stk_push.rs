@@ -49,4 +49,3 @@ async fn main() {
 
     println!("{}", response.customer_message);
 }
-
