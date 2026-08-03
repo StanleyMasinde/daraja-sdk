@@ -63,7 +63,7 @@ impl std::error::Error for ExpressError {
 ///
 /// Returned by [`MpesaExpress::send_prompt`]. A `response_code` of `"0"` means Daraja
 /// accepted the request; the customer still completes payment on their phone.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct StkPushResponse {
     /// Global unique identifier for the submitted payment request.
@@ -162,6 +162,7 @@ pub struct MpesaExpress {
     request_body: MpesaExpressRequest,
     http_client: Client,
     environment: DarajaEnvironment,
+    is_dry_run: bool,
 }
 
 impl DarajaApi for MpesaExpress {
@@ -187,6 +188,7 @@ impl MpesaExpress {
             passkey: String::new(),
             http_client: Client::new(),
             environment: DarajaEnvironment::default(),
+            is_dry_run: false,
         }
     }
 
@@ -291,6 +293,13 @@ impl MpesaExpress {
         self
     }
 
+    /// Prevents the sending of an actual request to the server.
+    /// It is useful for tests.
+    pub fn dy_run(mut self) -> Self {
+        self.is_dry_run = true;
+        self
+    }
+
     /// Validates the builder state, sends the STK Push request, and returns Daraja's response.
     ///
     /// Timestamps use East Africa Time (UTC+3) as required by Daraja.
@@ -338,39 +347,58 @@ impl MpesaExpress {
         self.request_body.timestamp = timestamp;
         self.request_body.password = password;
 
-        let response = self
+        let builder = self
             .http_client
             .post(self.get_url())
             .bearer_auth(&self.access_token)
-            .json(&self.request_body)
-            .send()
-            .await
-            .map_err(ExpressError::Request)?;
+            .json(&self.request_body);
 
-        if response.status().is_success() {
-            return response
-                .json::<StkPushResponse>()
+        if self.is_dry_run {
+            let req = builder.build().expect("Failed to build the request.");
+            println!("=== DRY RUN ===");
+            println!("Method:  {}", req.method());
+            println!("URL:     {}", req.url());
+            println!("Headers:\n{:#?}", req.headers());
+
+            if let Some(body) = req.body() {
+                if let Some(bytes) = body.as_bytes() {
+                    let body_str = String::from_utf8_lossy(bytes);
+                    println!("Body:\n{}", body_str);
+                } else {
+                    println!("Body: <stream/non-bytes>");
+                }
+            }
+            println!("===============");
+
+            Ok(StkPushResponse::default())
+        } else {
+            let response = builder.send().await.map_err(ExpressError::Request)?;
+
+            if response.status().is_success() {
+                return response
+                    .json::<StkPushResponse>()
+                    .await
+                    .map_err(ExpressError::Request);
+            }
+
+            let status = response.status();
+            let body = response
+                .text()
                 .await
-                .map_err(ExpressError::Request);
+                .unwrap_or_else(|err| format!("failed to read response body: {err}"));
+
+            if let Ok(api_error) = serde_json::from_str::<DarajaErrorResponse>(&body) {
+                return Err(ExpressError::Api {
+                    error_code: api_error.error_code,
+                    error_message: api_error.error_message,
+                });
+            }
+
+            Err(ExpressError::UnexpectedResponse { status, body })
         }
-
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|err| format!("failed to read response body: {err}"));
-
-        if let Ok(api_error) = serde_json::from_str::<DarajaErrorResponse>(&body) {
-            return Err(ExpressError::Api {
-                error_code: api_error.error_code,
-                error_message: api_error.error_message,
-            });
-        }
-
-        Err(ExpressError::UnexpectedResponse { status, body })
     }
 
-    fn validate(&self) -> Result<(), ExpressError> {
+    fn validate(&mut self) -> Result<(), ExpressError> {
         if self.access_token.is_empty() {
             return Err(ExpressError::Validation("access token is required".into()));
         }
@@ -387,12 +415,29 @@ impl MpesaExpress {
                 "amount must be greater than zero".into(),
             ));
         }
+
         if self.request_body.party_a == 0 {
-            return Err(ExpressError::Validation("party_a is required".into()));
+            match self.request_body.phone_number.gt(&0u64) {
+                true => self.request_body.party_a = self.request_body.phone_number,
+                false => {
+                    return Err(ExpressError::Validation(
+                        "Either Part A or phone number is required.".into(),
+                    ));
+                }
+            }
         }
+
         if self.request_body.party_b == 0 {
-            return Err(ExpressError::Validation("party_b is required".into()));
+            match self.request_body.business_short_code.gt(&0u32) {
+                true => self.request_body.party_b = self.request_body.business_short_code,
+                false => {
+                    return Err(ExpressError::Validation(
+                        "Either Part B or business short code is required.".into(),
+                    ));
+                }
+            }
         }
+
         if self.request_body.phone_number == 0 {
             return Err(ExpressError::Validation("phone_number is required".into()));
         }
@@ -476,12 +521,43 @@ mod tests {
 
     #[tokio::test]
     async fn send_prompt_rejects_incomplete_builder() {
+        let test_config = TestConfig::load();
+        let access_token = get_access_token().await;
         let err = MpesaExpress::new()
             .send_prompt()
             .await
             .expect_err("incomplete builder should fail validation");
 
         assert!(matches!(err, ExpressError::Validation(_)));
+
+        MpesaExpress::new()
+            .access_token(&access_token)
+            .passkey(&test_config.passkey)
+            .business_short_code(174379) // also sets party_b
+            .phone_number(test_config.phone_number) // also sets party_a
+            .party_a(test_config.phone_number)
+            .amount(1)
+            .account_reference("Order123")
+            .tx_description("Payment")
+            .call_back_url("https://your-domain.com/callback")
+            .dy_run()
+            .send_prompt()
+            .await
+            .expect("Party B should auto set from the business_short_code");
+
+        MpesaExpress::new()
+            .access_token(&access_token)
+            .passkey(&test_config.passkey)
+            .business_short_code(174379) // also sets party_b
+            .phone_number(test_config.phone_number) // also sets party_a
+            .amount(1)
+            .account_reference("Order123")
+            .tx_description("Payment")
+            .call_back_url("https://your-domain.com/callback")
+            .dy_run()
+            .send_prompt()
+            .await
+            .expect("Party A should auto set from the phone number.");
     }
 
     #[tokio::test]
