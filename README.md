@@ -55,8 +55,8 @@ async fn main() -> Result<(), ExpressError> {
         .access_token("your-access-token")
         .passkey("your-lipa-na-mpesa-passkey")
         .business_short_code(174379)
-        .party_a(254700000000)
-        .party_b(174379)
+        .party_a(254700000000) // Optional if phone number is set
+        .party_b(174379) // Optional if business short code is set.
         .phone_number(254700000000)
         .amount(1)
         .account_reference("Order123")
@@ -82,8 +82,6 @@ async fn main() -> Result<(), ExpressError> {
         .access_token("your-production-access-token")
         .passkey("your-production-passkey")
         .business_short_code(174379)
-        .party_a(254700000000)
-        .party_b(174379)
         .phone_number(254700000000)
         .amount(1)
         .account_reference("Order123")
@@ -114,8 +112,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .access_token(&token.access_token)
         .passkey("your-production-passkey")
         .business_short_code(174379)
-        .party_a(254700000000)
-        .party_b(174379)
         .phone_number(254700000000)
         .amount(1)
         .account_reference("Order123")
