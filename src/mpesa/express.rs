@@ -297,7 +297,7 @@ impl MpesaExpress {
 
     /// Prevents the sending of an actual request to the server.
     /// It is useful for tests.
-    pub fn dy_run(mut self) -> Self {
+    pub fn dry_run(mut self) -> Self {
         self.is_dry_run = true;
         self
     }
@@ -542,7 +542,7 @@ mod tests {
             .account_reference("Order123")
             .tx_description("Payment")
             .call_back_url("https://your-domain.com/callback")
-            .dy_run()
+            .dry_run()
             .send_prompt()
             .await
             .expect("Party B should auto set from the business_short_code");
@@ -556,7 +556,7 @@ mod tests {
             .account_reference("Order123")
             .tx_description("Payment")
             .call_back_url("https://your-domain.com/callback")
-            .dy_run()
+            .dry_run()
             .send_prompt()
             .await
             .expect("Party A should auto set from the phone number.");
