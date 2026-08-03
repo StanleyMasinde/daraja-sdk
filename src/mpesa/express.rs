@@ -256,7 +256,7 @@ impl MpesaExpress {
     }
 
     /// Sets the phone number sending money (`2547XXXXXXXX`).
-    /// You can choose to only set the phone number and leave this.
+    /// You can leave party_a unset if you have already set the number.
     pub fn party_a(mut self, party_a: u64) -> Self {
         self.request_body.party_a = party_a;
         self
