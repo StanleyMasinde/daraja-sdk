@@ -256,12 +256,14 @@ impl MpesaExpress {
     }
 
     /// Sets the phone number sending money (`2547XXXXXXXX`).
+    /// You can choose to only set the phone number and leave this.
     pub fn party_a(mut self, party_a: u64) -> Self {
         self.request_body.party_a = party_a;
         self
     }
 
     /// Sets the organization receiving the funds (credit party).
+    /// You can skip this if it is the same as the business_short_code.
     pub fn party_b(mut self, party_b: u32) -> Self {
         self.request_body.party_b = party_b;
         self
