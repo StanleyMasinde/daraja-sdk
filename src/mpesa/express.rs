@@ -356,7 +356,7 @@ impl MpesaExpress {
             .json(&self.request_body);
 
         if self.is_dry_run {
-            let req = builder.build().expect("Failed to build the request.");
+            let req = builder.build().map_err(ExpressError::Request)?;
             println!("=== DRY RUN ===");
             println!("Method:  {}", req.method());
             println!("URL:     {}", req.url());
