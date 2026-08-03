@@ -92,10 +92,13 @@ impl<'a> Client<'a> {
     ///
     /// let client = mpesa::Client::with_credentials("consumer_key", "consumer_secret");
     /// ```
-    pub fn with_credentials(consumer_key: &'a str, consumer_secret: &'a str) -> Self {
+    pub fn with_credentials(
+        consumer_key: &'a (impl AsRef<str> + ?Sized),
+        consumer_secret: &'a (impl AsRef<str> + ?Sized),
+    ) -> Self {
         Self {
-            consumer_key,
-            consumer_secret,
+            consumer_key: consumer_key.as_ref(),
+            consumer_secret: consumer_secret.as_ref(),
             environment: DarajaEnvironment::default(),
         }
     }
@@ -180,14 +183,14 @@ mod tests {
 
     #[test]
     fn with_credentials_sets_consumer_key_and_secret() {
-        let client = Client::with_credentials("test-key".into(), "test-secret".into());
+        let client = Client::with_credentials("test-key", "test-secret");
         assert_eq!(client.consumer_key, "test-key");
         assert_eq!(client.consumer_secret, "test-secret");
     }
 
     #[tokio::test]
     async fn generate_access_token_fails_with_invalid_credentials() {
-        let client = Client::with_credentials("invalid-key".into(), "invalid-secret".into());
+        let client = Client::with_credentials("invalid-key", "invalid-secret");
         let err = client
             .generate_access_token()
             .await
