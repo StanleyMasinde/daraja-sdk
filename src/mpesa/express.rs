@@ -365,7 +365,40 @@ impl MpesaExpress {
             if let Some(body) = req.body() {
                 if let Some(bytes) = body.as_bytes() {
                     let body_str = String::from_utf8_lossy(bytes);
-                    println!("Body:\n{}", body_str);
+
+                    let sensitive_keys = &["Password"];
+                    let redacted = body_str
+                        .split(',')
+                        .map(|segment| {
+                            for key in sensitive_keys {
+                                let key_pattern = format!("\"{}\"", key);
+
+                                if segment.contains(&key_pattern) {
+                                    // Split at the first colon separating key and value
+                                    if let Some((key_part, _val_part)) = segment.split_once(':') {
+                                        // Preserve original trailing braces/brackets if this is the last item
+                                        let closing_brackets: String = segment
+                                            .chars()
+                                            .rev()
+                                            .take_while(|c| *c == '}' || *c == ']' || *c == ' ')
+                                            .collect::<Vec<_>>()
+                                            .into_iter()
+                                            .rev()
+                                            .collect();
+
+                                        return format!(
+                                            "{}:\"[REDACTED]\"{}",
+                                            key_part, closing_brackets
+                                        );
+                                    }
+                                }
+                            }
+                            segment.to_string()
+                        })
+                        .collect::<Vec<String>>()
+                        .join(",");
+
+                    println!("Body:\n{}", redacted);
                 } else {
                     println!("Body: <stream/non-bytes>");
                 }
