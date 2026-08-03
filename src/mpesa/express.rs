@@ -523,8 +523,6 @@ mod tests {
 
     #[tokio::test]
     async fn send_prompt_rejects_incomplete_builder() {
-        let test_config = TestConfig::load();
-        let access_token = get_access_token().await;
         let err = MpesaExpress::new()
             .send_prompt()
             .await
@@ -533,11 +531,11 @@ mod tests {
         assert!(matches!(err, ExpressError::Validation(_)));
 
         MpesaExpress::new()
-            .access_token(&access_token)
-            .passkey(&test_config.passkey)
+            .access_token("access_token")
+            .passkey("passkey")
             .business_short_code(174379) // also sets party_b
-            .phone_number(test_config.phone_number) // also sets party_a
-            .party_a(test_config.phone_number)
+            .phone_number(0712345678) // also sets party_a
+            .party_a(0712345678)
             .amount(1)
             .account_reference("Order123")
             .tx_description("Payment")
@@ -548,10 +546,10 @@ mod tests {
             .expect("Party B should auto set from the business_short_code");
 
         MpesaExpress::new()
-            .access_token(&access_token)
-            .passkey(&test_config.passkey)
+            .access_token("access_token")
+            .passkey("passkey")
             .business_short_code(174379) // also sets party_b
-            .phone_number(test_config.phone_number) // also sets party_a
+            .phone_number(0712345678) // also sets party_a
             .amount(1)
             .account_reference("Order123")
             .tx_description("Payment")
