@@ -63,7 +63,7 @@ impl std::error::Error for ExpressError {
 ///
 /// Returned by [`MpesaExpress::send_prompt`]. A `response_code` of `"0"` means Daraja
 /// accepted the request; the customer still completes payment on their phone.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct StkPushResponse {
     /// Global unique identifier for the submitted payment request.
@@ -144,8 +144,8 @@ struct DarajaErrorResponse {
 ///     .access_token("your-access-token")
 ///     .passkey("your-passkey")
 ///     .business_short_code(174379)
-///     .party_a(254700000000)
-///     .party_b(174379)
+///     .party_a(254700000000) // Optional if phone_number is set.
+///     .party_b(174379) // Optional if business_short_code is set.
 ///     .phone_number(254700000000)
 ///     .amount(1)
 ///     .account_reference("Order123")
@@ -162,6 +162,7 @@ pub struct MpesaExpress {
     request_body: MpesaExpressRequest,
     http_client: Client,
     environment: DarajaEnvironment,
+    is_dry_run: bool,
 }
 
 impl DarajaApi for MpesaExpress {
@@ -187,6 +188,7 @@ impl MpesaExpress {
             passkey: String::new(),
             http_client: Client::new(),
             environment: DarajaEnvironment::default(),
+            is_dry_run: false,
         }
     }
 
@@ -254,12 +256,14 @@ impl MpesaExpress {
     }
 
     /// Sets the phone number sending money (`2547XXXXXXXX`).
+    /// You can leave party_a unset if you have already set the number.
     pub fn party_a(mut self, party_a: u64) -> Self {
         self.request_body.party_a = party_a;
         self
     }
 
     /// Sets the organization receiving the funds (credit party).
+    /// You can skip this if it is the same as the business_short_code.
     pub fn party_b(mut self, party_b: u32) -> Self {
         self.request_body.party_b = party_b;
         self
@@ -288,6 +292,13 @@ impl MpesaExpress {
     /// Sets the transaction description shown to the customer (max 13 characters).
     pub fn tx_description(mut self, description: &str) -> Self {
         self.request_body.transaction_desc = description.into();
+        self
+    }
+
+    /// Prevents the sending of an actual request to the server.
+    /// It is useful for tests.
+    pub fn dry_run(mut self) -> Self {
+        self.is_dry_run = true;
         self
     }
 
@@ -338,39 +349,91 @@ impl MpesaExpress {
         self.request_body.timestamp = timestamp;
         self.request_body.password = password;
 
-        let response = self
+        let builder = self
             .http_client
             .post(self.get_url())
             .bearer_auth(&self.access_token)
-            .json(&self.request_body)
-            .send()
-            .await
-            .map_err(ExpressError::Request)?;
+            .json(&self.request_body);
 
-        if response.status().is_success() {
-            return response
-                .json::<StkPushResponse>()
+        if self.is_dry_run {
+            let req = builder.build().map_err(ExpressError::Request)?;
+            println!("=== DRY RUN ===");
+            println!("Method:  {}", req.method());
+            println!("URL:     {}", req.url());
+            println!("Headers:\n{:#?}", req.headers());
+
+            if let Some(body) = req.body() {
+                if let Some(bytes) = body.as_bytes() {
+                    let body_str = String::from_utf8_lossy(bytes);
+
+                    let sensitive_keys = &["Password"];
+                    let redacted = body_str
+                        .split(',')
+                        .map(|segment| {
+                            for key in sensitive_keys {
+                                let key_pattern = format!("\"{}\"", key);
+
+                                if segment.contains(&key_pattern) {
+                                    // Split at the first colon separating key and value
+                                    if let Some((key_part, _val_part)) = segment.split_once(':') {
+                                        // Preserve original trailing braces/brackets if this is the last item
+                                        let closing_brackets: String = segment
+                                            .chars()
+                                            .rev()
+                                            .take_while(|c| *c == '}' || *c == ']' || *c == ' ')
+                                            .collect::<Vec<_>>()
+                                            .into_iter()
+                                            .rev()
+                                            .collect();
+
+                                        return format!(
+                                            "{}:\"[REDACTED]\"{}",
+                                            key_part, closing_brackets
+                                        );
+                                    }
+                                }
+                            }
+                            segment.to_string()
+                        })
+                        .collect::<Vec<String>>()
+                        .join(",");
+
+                    println!("Body:\n{}", redacted);
+                } else {
+                    println!("Body: <stream/non-bytes>");
+                }
+            }
+            println!("===============");
+
+            Ok(StkPushResponse::default())
+        } else {
+            let response = builder.send().await.map_err(ExpressError::Request)?;
+
+            if response.status().is_success() {
+                return response
+                    .json::<StkPushResponse>()
+                    .await
+                    .map_err(ExpressError::Request);
+            }
+
+            let status = response.status();
+            let body = response
+                .text()
                 .await
-                .map_err(ExpressError::Request);
+                .unwrap_or_else(|err| format!("failed to read response body: {err}"));
+
+            if let Ok(api_error) = serde_json::from_str::<DarajaErrorResponse>(&body) {
+                return Err(ExpressError::Api {
+                    error_code: api_error.error_code,
+                    error_message: api_error.error_message,
+                });
+            }
+
+            Err(ExpressError::UnexpectedResponse { status, body })
         }
-
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|err| format!("failed to read response body: {err}"));
-
-        if let Ok(api_error) = serde_json::from_str::<DarajaErrorResponse>(&body) {
-            return Err(ExpressError::Api {
-                error_code: api_error.error_code,
-                error_message: api_error.error_message,
-            });
-        }
-
-        Err(ExpressError::UnexpectedResponse { status, body })
     }
 
-    fn validate(&self) -> Result<(), ExpressError> {
+    fn validate(&mut self) -> Result<(), ExpressError> {
         if self.access_token.is_empty() {
             return Err(ExpressError::Validation("access token is required".into()));
         }
@@ -387,12 +450,29 @@ impl MpesaExpress {
                 "amount must be greater than zero".into(),
             ));
         }
+
         if self.request_body.party_a == 0 {
-            return Err(ExpressError::Validation("party_a is required".into()));
+            match self.request_body.phone_number.gt(&0u64) {
+                true => self.request_body.party_a = self.request_body.phone_number,
+                false => {
+                    return Err(ExpressError::Validation(
+                        "Either Part A or phone number is required.".into(),
+                    ));
+                }
+            }
         }
+
         if self.request_body.party_b == 0 {
-            return Err(ExpressError::Validation("party_b is required".into()));
+            match self.request_body.business_short_code.gt(&0u32) {
+                true => self.request_body.party_b = self.request_body.business_short_code,
+                false => {
+                    return Err(ExpressError::Validation(
+                        "Either Part B or business short code is required.".into(),
+                    ));
+                }
+            }
         }
+
         if self.request_body.phone_number == 0 {
             return Err(ExpressError::Validation("phone_number is required".into()));
         }
@@ -482,6 +562,35 @@ mod tests {
             .expect_err("incomplete builder should fail validation");
 
         assert!(matches!(err, ExpressError::Validation(_)));
+
+        MpesaExpress::new()
+            .access_token("access_token")
+            .passkey("passkey")
+            .business_short_code(174379) // also sets party_b
+            .phone_number(0712345678) // also sets party_a
+            .party_a(0712345678)
+            .amount(1)
+            .account_reference("Order123")
+            .tx_description("Payment")
+            .call_back_url("https://your-domain.com/callback")
+            .dry_run()
+            .send_prompt()
+            .await
+            .expect("Party B should auto set from the business_short_code");
+
+        MpesaExpress::new()
+            .access_token("access_token")
+            .passkey("passkey")
+            .business_short_code(174379) // also sets party_b
+            .phone_number(0712345678) // also sets party_a
+            .amount(1)
+            .account_reference("Order123")
+            .tx_description("Payment")
+            .call_back_url("https://your-domain.com/callback")
+            .dry_run()
+            .send_prompt()
+            .await
+            .expect("Party A should auto set from the phone number.");
     }
 
     #[tokio::test]
