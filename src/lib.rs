@@ -60,8 +60,8 @@
 //!         .access_token("your-access-token")
 //!         .passkey("your-lipa-na-mpesa-passkey")
 //!         .business_short_code(174379)
-//!         .party_a(254700000000)
-//!         .party_b(174379)
+//!         .party_a(254700000000) // Optional if phone_number is set.
+//!         .party_b(174379) // Optional if business_short_code is set.
 //!         .phone_number(254700000000)
 //!         .amount(1)
 //!         .account_reference("Order123")
