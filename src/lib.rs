@@ -47,7 +47,7 @@
 //! }
 //! ```
 //!
-//! ## M-Pesa Express (STK Push)
+//! ## 'M-Pesa' Express (STK Push)
 //!
 //! Obtain an access token first (see OAuth above), then:
 //!

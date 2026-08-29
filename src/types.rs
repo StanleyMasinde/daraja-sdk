@@ -17,9 +17,9 @@ pub enum DarajaEnvironment {
     Live,
 }
 
-/// Common behavior for Daraja API endpoint builders.
+/// Common behaviour for Daraja API endpoint builders.
 ///
-/// Implementors supply the endpoint path and current [`DarajaEnvironment`].
+/// Users of this trait supply the endpoint path and current [`DarajaEnvironment`].
 /// [`get_url`](Self::get_url) combines them into a full request URL.
 ///
 /// Each endpoint builder exposes [`.production()`](Self::production) so callers

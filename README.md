@@ -10,7 +10,7 @@ API builders default to the Daraja **sandbox** (`sandbox.safaricom.co.ke`). Call
 
 Environment is configured **per endpoint builder** — there is no shared global setting. If you use OAuth and STK Push together, call `.production()` on both builders so the access token and the STK Push request target the same environment.
 
-## OAuth authentication
+## OAuth Authentication
 
 ```rust
 use daraja_sdk::mpesa;
@@ -43,7 +43,7 @@ async fn main() -> Result<(), reqwest::Error> {
 
 ## M-Pesa Express (STK Push)
 
-Obtain an access token first, then use [`MpesaExpress`](https://docs.rs/daraja-sdk/latest/daraja_sdk/mpesa/struct.MpesaExpress.html) to send a Lipa na M-Pesa Online prompt:
+Obtain an access token first, then use [`MpesaExpress`](https://docs.rs/daraja-sdk/latest/daraja_sdk/mpesa/struct.MpesaExpress.html) to send a "Lipa Na M-Pesa" Online prompt:
 
 ```rust
 use daraja_sdk::mpesa::{ExpressError, MpesaExpress};
@@ -139,7 +139,7 @@ cargo run --example oauth
 
 ### STK Push
 
-Obtains an OAuth access token, then sends a Lipa na M-Pesa Online prompt.
+Obtains an OAuth access token, then sends a "Lipa Na M-Pesa" Online prompt.
 
 ```bash
 export DARAJA_CONSUMER_KEY="your-consumer-key"
@@ -152,19 +152,19 @@ cargo run --example stk_push
 
 For production, add `.production()` on both `Client` and `MpesaExpress` builders (see the code samples above).
 
-## Planned features
+## Planned Features
 
 - [x] **OAuth authentication** — generate access tokens for Daraja API requests
-- [x] **M-Pesa Express (STK Push)** — initiate Lipa na M-Pesa Online payments
+- [x] **M-Pesa Express (STK Push)** — initiate "Lipa Na M-Pesa" Online payments
 - [x] **Production environment** — configurable sandbox vs production base URLs (per endpoint builder)
 - [ ] **STK Push query** — query the status of an STK Push request
-- [ ] **B2C** — send money from a business shortcode to a customer
-- [ ] **C2B** — register validation and confirmation URLs for paybill/till payments
+- [ ] **B2C** — send money from a business short code to a customer
+- [ ] **C2B** — register validation and confirmation URLs for Pay Bill/Till payments
 - [ ] **Transaction status** — query the result of a payment request
-- [ ] **Account balance** — check balances for a shortcode
+- [ ] **Account balance** — check balances for a short code
 - [ ] **Reversals** — reverse a completed transaction
 
-## Developing locally
+## Developing Locally
 
 Requires a [Rust](https://www.rust-lang.org/tools/install) toolchain that supports edition 2024, plus sandbox credentials from the [Daraja Developer Portal](https://developer.safaricom.co.ke/).
 
@@ -186,10 +186,10 @@ Integration tests call the live Daraja sandbox. Copy `config.toml.example` and f
 | --- | --- |
 | `consumer_key` | Daraja app consumer key |
 | `consumer_secret` | Daraja app consumer secret |
-| `passkey` | Lipa Na M-Pesa Online passkey (sandbox or production) |
+| `passkey` | "Lipa Na M-Pesa" Online passkey (sandbox or production) |
 | `callback_url` | HTTPS URL where Daraja posts STK Push results |
 | `phone_number` | Safaricom number to receive the STK prompt (`2547XXXXXXXX`) |
 
-`config.toml` is gitignored so credentials are not committed.
+`config.toml` is git ignored so credentials are not committed.
 
-To reduce repeated OAuth calls during local development, integration tests cache the last successful access token in `last_token.txt` at the project root. On subsequent runs, tests reuse the cached token if it has not expired instead of requesting a new one from the API. This file is gitignored and contains live credentials — do not commit it. Delete `last_token.txt` if you want to force a fresh token fetch or if the cache format changes.
+To reduce repeated OAuth calls during local development, integration tests cache the last successful access token in `last_token.txt` at the project root. On subsequent runs, tests reuse the cached token if it has not expired instead of requesting a new one from the API. This file is git ignored and contains live credentials — do not commit it. Delete `last_token.txt` if you want to force a fresh token fetch or if the cache format changes.

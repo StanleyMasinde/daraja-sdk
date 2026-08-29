@@ -25,7 +25,7 @@ pub enum ExpressError {
         /// Human-readable error message from Daraja.
         error_message: String,
     },
-    /// Daraja returned a non-success HTTP status without a parseable error body.
+    /// Daraja returned a non-success HTTP status without a parsable error body.
     UnexpectedResponse {
         /// HTTP status code.
         status: reqwest::StatusCode,
