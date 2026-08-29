@@ -1,6 +1,6 @@
 //! Initiate an M-Pesa Express STK Push (sandbox).
 //!
-//! Obtains an OAuth access token, then sends a Lipa na M-Pesa Online prompt.
+//! Obtains an OAuth access token, then sends a Lipa Na M-Pesa Online prompt.
 //!
 //! ```bash
 //! export DARAJA_CONSUMER_KEY="your-consumer-key"
