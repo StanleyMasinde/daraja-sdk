@@ -1,5 +1,8 @@
 # Daraja SDK
 
+![Crates.io Total Downloads](https://img.shields.io/crates/d/daraja-sdk?style=for-the-badge)
+
+
 A memory-safe Rust SDK for [Safaricom Daraja](https://developer.safaricom.co.ke/) (M-Pesa API 3.0), focused on correctness and type safety.
 
 > **Experimental:** This project is an early experiment. The API is unstable, coverage is limited, and it is not ready for production use.
